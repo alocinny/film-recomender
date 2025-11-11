@@ -1,0 +1,8 @@
+pandas
+numpy<2.0
+scikit-learn
+matplotlib
+seaborn
+streamlit
+pickle-mixin
+scikit-surprise
