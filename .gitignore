@@ -63,5 +63,4 @@ models/
 *.pkl
 
 # 2. Ignorar os dados brutos.
-data/u.data
-data/u.item
+data/
