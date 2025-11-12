@@ -59,12 +59,13 @@ pip install -r requirements.txt
 ### 1. Treinamento (obrigatório na primeira vez)
 Os modelos treinados (.pkl) são gerados localmente e não são versionados. Você deve executar os scripts da pasta notebooks/ na ordem correta:
 ```bash
-# 1. Gera EDA, modelos baseline e salva em 'models/'
+# 1. Gera EDA, modelos baseline, busca e otimiza, e salva em 'models/'
 python notebooks/eda.py
 python notebooks/baseline_models.py
 
-# 2. Roda o Grid Search, salva os melhores modelos e os resultados
+# 2. Roda o Grid Search e Bayesian, salva os melhores modelos e os resultados
 python notebooks/grid_search.py
+python notebooks/bayesian_opt.py
 ```
 
 ### 2. Aplicação Streamlit
