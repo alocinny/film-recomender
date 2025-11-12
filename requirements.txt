@@ -6,3 +6,4 @@ seaborn
 streamlit
 pickle-mixin
 scikit-surprise
+hyperopt
