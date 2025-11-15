@@ -177,3 +177,8 @@ plt.title('temporal analysis')
 temporal_analysis_path = os.path.join(IMAGES_DIR, 'temporal_analysis.png')
 plt.savefig(temporal_analysis_path, bbox_inches='tight')
 plt.close()
+
+
+
+
+
