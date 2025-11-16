@@ -7,3 +7,4 @@ streamlit
 pickle-mixin
 scikit-surprise
 hyperopt
+optuna

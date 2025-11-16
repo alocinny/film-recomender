@@ -168,3 +168,6 @@ plt.legend(title='Similarity Measure', fontsize=11, title_fontsize=13)
 knn_plot_path = os.path.join(IMAGES_DIR, 'lineplot_grid_search_knn.png')
 plt.savefig(knn_plot_path, bbox_inches='tight')
 plt.close()
+
+
+print(test)
