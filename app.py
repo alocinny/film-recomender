@@ -6,16 +6,18 @@ import os
 DATA_DIR = 'data'
 MODELS_DIR = 'models'
 
-# modelo
-MODEL_NAME = 'final_svd_model.pkl'
-MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
+
 MOVIES_PATH = os.path.join(DATA_DIR, 'movies.csv')
 RATINGS_PATH = os.path.join(DATA_DIR, 'ratings.csv')
 
+
+if "current_model_name" not in st.session_state: # Inicializa modelo default
+    st.session_state.current_model_name = "final_svd_model.pkl"
+
 @st.cache_data
-def laod_data():
+def laod_data(model_path):
     try:
-        with open(MODEL_PATH, 'rb') as f:
+        with open(model_path, 'rb') as f:
             model = pickle.load(f)
     except FileNotFoundError as e:
         print(f"Error loading model: {e}")
@@ -121,14 +123,37 @@ def get_user_profile(user_id, ratings_df, movies_df, rating_threshold=4.0):
 
 
 
+
+
+
+
+# -------------------------------------------- UI -------------------------------------------
 # interface do streamlit (UI)
+
+
+
 st.set_page_config(layout="wide", page_title="Sistema de Recomendação")
 
 st.title("Sistema de Recomendação de Filmes")
-st.markdown(f"Desenvolvido com 'scikit-surprise' (modelo: **{MODEL_NAME}**) e 'streamlit'.")
+st.markdown(f"Desenvolvido com 'scikit-surprise' (modelo: ) e 'streamlit'.")
+
+st.subheader("Selecione o Modelo")
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Modelo SVD"):
+        st.session_state.current_model_name = "final_svd_model.pkl"
+
+with col2:
+    if st.button("Modelo KNN"):
+        st.session_state.current_model_name = "final_knn_model.pkl"
+
+MODEL_NAME = st.session_state.current_model_name
+MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
+
 
 # carregar dados
-model, movies_df = laod_data()
+model, movies_df = laod_data(MODEL_PATH)
 ratings_df = load_ratings()
 
 if model is not None and movies_df is not None and ratings_df is not None:

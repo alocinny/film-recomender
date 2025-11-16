@@ -1,3 +1,6 @@
+
+# Análise Exploratória dos Dados (EDA)
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,7 +14,6 @@ IMAGES_DIR = 'images'
 MODELS_DIR = 'models'
 RESULTS_DIR = 'results'
 
-# carregar dados da EDA
 
 ratings_path = os.path.join(DATA_DIR, 'ratings.csv')
 movies_path = os.path.join(DATA_DIR, 'movies.csv')
