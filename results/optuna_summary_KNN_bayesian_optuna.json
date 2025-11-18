@@ -1,15 +1,15 @@
 {
     "model_name": "KNN_bayesian_optuna",
     "metrics": {
-        "rmse": 0.9091691986228793,
-        "mae": 0.698164829228576,
-        "train_time": 2.852837085723877,
-        "predict_time": 5.619519472122192,
-        "optimization_time": 468.9370439052582,
-        "best_cv_rmse": 0.9115810513881697
+        "rmse": 0.9087606687055549,
+        "mae": 0.697585702377882,
+        "train_time": 2.7536165714263916,
+        "predict_time": 5.110182762145996,
+        "optimization_time": 414.79426670074463,
+        "best_cv_rmse": 0.911718733705864
     },
     "best_params": {
-        "k": 61,
+        "k": 74,
         "sim_options": {
             "name": "msd",
             "user_based": false

@@ -6,13 +6,14 @@ import os
 DATA_DIR = 'data'
 MODELS_DIR = 'models'
 RESULTS_DIR = 'results'
-
+NAME_MODEL_KNN = "final_KNN_bayesian_optuna.pkl"
+NAME_MODEL_SVD = "final_SVD_bayesian_optuna.pkl"    
 
 MOVIES_PATH = os.path.join(DATA_DIR, 'movies.csv')
 RATINGS_PATH = os.path.join(DATA_DIR, 'ratings.csv')
 
 if "current_model_name" not in st.session_state: # Inicializa modelo default
-    st.session_state.current_model_name = "final_svd_model.pkl"
+    st.session_state.current_model_name = NAME_MODEL_SVD
 
 @st.cache_data
 def laod_data(model_path):
@@ -141,12 +142,12 @@ col1, col2 = st.columns(2)
 
 with col1:
     if st.button("Modelo SVD"):
-        st.session_state.current_model_name = "final_SVD_bayesian_optuna.pkl"
+        st.session_state.current_model_name = NAME_MODEL_SVD
 
 
 with col2:
     if st.button("Modelo KNN"):
-        st.session_state.current_model_name = "final_KNN_bayesian_optuna.pkl"
+        st.session_state.current_model_name = NAME_MODEL_KNN
 
 MODEL_NAME = st.session_state.current_model_name
 MODEL_PATH = os.path.join(MODELS_DIR, MODEL_NAME)
