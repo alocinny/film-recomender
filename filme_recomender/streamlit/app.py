@@ -1,5 +1,6 @@
 import streamlit as st
 import backend_app as bk
+import pandas as pd
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -38,8 +39,40 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+def display_movies_grid(df, show_score=True):
+    """
+    Exibe grade horizontal larga.
+    Args:
+        show_score (bool): Se False, esconde a nota (útil para Novo Usuário).
+    """
+    if not df.empty:
+        rows = [df.iloc[i:i+5] for i in range(0, len(df), 5)]
+        for row in rows:
+            cols = st.columns(5)
+            for idx, (_, movie) in enumerate(row.iterrows()):
+                with cols[idx]:
+                    # Tratamento seguro de dados
+                    poster = movie.get('Poster')
+                    if pd.isna(poster): poster = "https://via.placeholder.com/300x450?text=Img+N/A"
+                    title = movie.get('Title', 'Sem Título')
+                    
+                    # Lógica para mostrar ou esconder a nota HTML
+                    score_html = ""
+                    if show_score:
+                        score_val = movie.get('Score', 0)
+                        score_html = f'<div style="font-weight:bold; color:#e50914; margin-top:5px;">⭐ {score_val:.1f}</div>'
+
+                    st.markdown(f"""
+                    <div class="movie-container">
+                        <img src="{poster}" width="100%" style="border-radius:4px;">
+                        <div class="movie-title">{title}</div>
+                        {score_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        st.warning("Sem recomendações.")
 # --- Load Data ---
-model_hb, model_knn , movies_df, ratings_df = bk.load_data()
+model_hb, model_knn_item, model_knn , movies_df, ratings_df = bk.load_data()
 
 # ==============================================================================
 # SIDEBAR - CONTROLES
@@ -52,18 +85,20 @@ with st.sidebar:
     
     st.markdown("---")
     
-    st.write("### Modelo de IA")
-    model_choice = st.selectbox(
-        "Escolha o algoritmo:",
-        ["Híbrido (SVD+RF)", "KNN (Simples)"]
-    )
-    
+
     st.markdown("---")
 
+    model_choice = None
     selected_user_id = None
     new_user_movies = []
     
     if user_mode == "Usuário Existente":
+
+        st.write("### Modelo de IA")
+        model_choice = st.selectbox(
+        "Escolha o algoritmo:",
+        ["Híbrido (SVD+RF)", "KNN (Simples)"]
+    )
         if ratings_df is not None:
             min_u, max_u = int(ratings_df['userId'].min()), int(ratings_df['userId'].max())
             selected_user_id = st.number_input("Seu ID", min_u, max_u, value=196)
@@ -139,39 +174,49 @@ if user_mode == "Usuário Existente":
 # MODO 2: NOVO USUÁRIO (Cold Start)
 # ------------------------------------------------------------------------------
 else:
-    st.subheader("Bem-vindo! Vamos conhecer seu gosto.")
-    st.write("Selecione **pelo menos 3 filmes** que você gosta na lista abaixo (Top Populares):")
+    st.subheader("Bem-vindo! Vamos calibrar o sistema.")
+    st.info("ℹ️ Usando algoritmo **KNN Item-Based** (Inteligência de Itens Similares).")
+
+    # --- ALTERAÇÃO 4: IMPLEMENTAÇÃO DO FUNIL DE PREFERÊNCIA ---
     
-    # Carregar filmes populares para o selectbox
-    popular_movies = bk.get_popular_movies_for_selection(movies_df, ratings_df)
+    # Passo A: Filtro de Gêneros
+    st.markdown("#### 1. Quais gêneros você prefere?")
+    all_genres = bk.get_all_genres(movies_df)
+    selected_genres = st.multiselect("Selecione:", options=all_genres)
+
+    # Passo B: Seleção de Filmes (Filtrados pelos gêneros acima)
+    st.markdown("#### 2. Marque filmes que você GOSTOU:")
     
-    # Cria um dicionário {Titulo (Ano): ID} para o selectbox
-    movie_options = {f"{row.title}": row.movieId for row in popular_movies.itertuples()}
+    # Busca populares filtrados
+    popular_filtered = bk.get_popular_movies_filtered(movies_df, ratings_df, genres=selected_genres, n=50)
     
-    selected_titles = st.multiselect("Pesquise e adicione:", options=list(movie_options.keys()))
-    
-    # Recupera os IDs selecionados
+    # Cria lista para o selectbox
+    movie_options = {f"{row.title}": row.movieId for row in popular_filtered.itertuples()}
+    selected_titles = st.multiselect("Filmes:", options=list(movie_options.keys()))
     selected_ids = [movie_options[t] for t in selected_titles]
     
     st.divider()
     
     if btn_recommend:
-        if len(selected_ids) < 3:
-            st.warning("⚠️ Por favor, selecione pelo menos 3 filmes para começarmos.")
+        if len(selected_ids) < 1:
+            st.warning("⚠️ Selecione pelo menos 3 filme para melhores recomendações.")
         else:
-            with st.spinner(f"Analisando seus gostos com {model_choice}..."):
-                # Chama a função específica para novos usuários
-                recs = bk.get_recommendations_new_user(selected_ids, model_hb, model_knn, movies_df, model_choice, n=num_recs)
+            with st.spinner("Buscando itens similares na matriz (Item-Based)..."):
                 
-                st.success("Baseado no que você escolheu:")
+                # Monta o dicionário com o modelo ITEM-BASED para o backend usar
+                models_dict = {"KNN_ITEM": model_knn_item}
                 
-                # Grid de Filmes (Reutilizando a lógica visual)
-                rows = [recs.iloc[i:i+5] for i in range(0, len(recs), 5)]
-                for row in rows:
-                    cols = st.columns(5)
-                    for _, (col, movie) in enumerate(zip(cols, row.iterrows())):
-                        m = movie[1]
-                        with col:
-                            st.image(m['Poster'], use_container_width=True)
-                            st.markdown(f"<div class='movie-title'>{m['Title']}</div>", unsafe_allow_html=True)
-                            st.write(f"⭐ **{m['Score']:.1f}**")
+                recs = bk.get_recommendations_new_user(
+                    selected_ids, 
+                    models_dict, 
+                    movies_df, 
+                    ratings_df, 
+                    n=num_recs
+                )
+                
+                if not recs.empty:
+                        st.success("Recomendações baseadas nos itens que você selecionou:")
+                        # AQUI ESTAVA FALTANDO: Usar a função visual pronta em vez do loop manual
+                        display_movies_grid(recs, show_score=False)
+                else:
+                    st.warning("Não encontramos correlações suficientes. Tente selecionar filmes mais populares.")

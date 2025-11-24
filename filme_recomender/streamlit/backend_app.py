@@ -2,7 +2,6 @@ import pandas as pd
 import pickle
 import os
 import requests
-import random
 import streamlit as st
 import sys
 
@@ -40,7 +39,7 @@ def load_data():
     """Carrega o modelo, filmes, ratings e links de forma otimizada."""
     model_hb = None
     model_knn = None
-    #model_knn_item = None
+    model_knn_item = None
     movies_df = None
     ratings_df = None
     
@@ -50,8 +49,8 @@ def load_data():
             model_hb = pickle.load(f)
         with open(MODEL_PATH_KNN_U, 'rb') as f:
             model_knn = pickle.load(f)
-        # with open(MODEL_PATH_KNN_I, 'rb') as f:
-        #     model_knn_item = pickle.load(f)
+        with open(MODEL_PATH_KNN_I, 'rb') as f:
+            model_knn_item = pickle.load(f)
             
     except FileNotFoundError:
         st.error(f"Erro: Modelo não encontrado em {MODEL_PATH_HB}")
@@ -71,7 +70,7 @@ def load_data():
     except FileNotFoundError:
         st.error(f"Erro: Arquivo ratings.csv não encontrado.")
 
-    return model_hb, model_knn , movies_df, ratings_df
+    return model_hb, model_knn_item, model_knn , movies_df, ratings_df
 
 
 # ==============================================================================
@@ -124,6 +123,50 @@ def get_popular_movies_for_selection(movies_df, ratings_df, n=20):
     top_movies = ratings_df.groupby('movieId').count()['rating'].sort_values(ascending=False).head(n).index
     return movies_df[movies_df['movieId'].isin(top_movies)][['movieId', 'title']]
 
+def get_all_genres(movies_df):
+    """Lista todos os gêneros únicos para o filtro de Cold Start"""
+    all_genres = movies_df['genres'].str.split('|').explode().unique()
+    all_genres = [g for g in all_genres if g != "(no genres listed)"]
+    return sorted(all_genres)
+
+def get_popular_movies_filtered(movies_df, ratings_df, genres=None, n=30):
+    """Retorna filmes populares filtrados por gênero (Cold Start)"""
+    pop_counts = ratings_df['movieId'].value_counts()
+    top_movies_df = movies_df[movies_df['movieId'].isin(pop_counts.index)].copy()
+    top_movies_df['n_ratings'] = top_movies_df['movieId'].map(pop_counts)
+    
+    if genres:
+        mask = top_movies_df['genres'].apply(lambda x: any(g in x.split('|') for g in genres))
+        top_movies_df = top_movies_df[mask]
+    
+    return top_movies_df.sort_values(by='n_ratings', ascending=False).head(n)
+
+def _format_results(predictions, movies_df, n):
+    """Formata a lista de tuplas (id, score) em um DataFrame bonito com imagens"""
+    predictions.sort(key=lambda x: x[1], reverse=True)
+    top_n = predictions[:n]
+    
+    results = []
+    for movie_id, score in top_n:
+        movie_row = movies_df[movies_df['movieId'] == movie_id]
+        if movie_row.empty: continue
+        movie_info = movie_row.iloc[0]
+        
+        # Busca imagem
+        poster_url = "https://via.placeholder.com/300x450?text=..."
+        if 'tmdbId' in movie_info:
+            poster_url = fetch_poster_url(movie_info['tmdbId'])
+            
+        results.append({
+            'movieId': movie_id,
+            'Title': movie_info['title'],
+            'Genres': str(movie_info['genres']).replace('|', ', '),
+            'Score': score,
+            'Poster': poster_url
+        })
+    return pd.DataFrame(results)
+
+
 # ==============================================================================
 # LÓGICA DE RECOMENDAÇÃO
 # ==============================================================================
@@ -131,7 +174,7 @@ def get_popular_movies_for_selection(movies_df, ratings_df, n=20):
 def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, ratings_df, model_type="Híbrido (SVD+RF)", n=10):
     """
     Lógica para USUÁRIO EXISTENTE.
-    Versão COMPLETA (analisa todos os filmes, sem amostragem).
+
     """
     
     # 1. Prepara lista de filmes vistos e não vistos
@@ -154,7 +197,7 @@ def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, rating
         
         knn_predictions = []
         
-        # AQUI MUDOU: Iteramos sobre TODOS os unseen_movie_ids, não usamos random.sample
+       
         for movie_id in unseen_movie_ids:
             try:
                 pred = model_knn.predict(uid=user_id_int, iid=movie_id)
@@ -170,7 +213,7 @@ def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, rating
         
         hb_predictions = []
         
-        # Mesma coisa aqui: Removemos a amostragem para testar o Híbrido completo também
+       
         for movie_id in unseen_movie_ids:
             try:
                 score = model_hb.predict(uid=user_id_int, iid=movie_id)
@@ -183,143 +226,76 @@ def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, rating
     return pd.DataFrame()
 
     
-def get_recommendations_new_user(selected_movie_ids, model, movies_df, model_type="Híbrido (SVD+RF)", n=10):
-    """
-    Lógica para NOVO USUÁRIO (Cold Start).
-    Recebe uma lista de IDs de filmes que ele marcou como 'Gostei'.
-    """
-    # -----------------------------------------------------------
-    # LÓGICA PLACEHOLDER - PONTO DE ENTRADA PARA O DESENVOLVEDOR
-    # -----------------------------------------------------------
-    # A ideia aqui seria:
-    # 1. Pegar o vetor médio desses filmes selecionados.
-    # 2. Achar filmes similares (KNN).
-    # 3. Ou criar um 'User Temporário' no SVD e prever.
-    
-    # Por enquanto, vamos simular recomendando filmes do mesmo gênero dos selecionados
-    if not selected_movie_ids:
-        return pd.DataFrame()
 
-    # Pega gêneros dos filmes selecionados
-    selected_genres = movies_df[movies_df['movieId'].isin(selected_movie_ids)]['genres'].str.split('|').explode().unique()
+def get_recommendations_new_user(selected_movie_ids, models, movies_df, ratings_df, n=10):
     
-    # Filtra filmes candidatos que tenham esses gêneros (simulação barata)
-    candidates = movies_df[movies_df['genres'].str.contains('|'.join(selected_genres), na=False)]
-    candidates = candidates[~candidates['movieId'].isin(selected_movie_ids)] # Remove os já escolhidos
+    knn_item = models.get("KNN_ITEM")
     
-    # Pega 10 aleatórios desse pool (Só para mostrar que funcionou a UI)
-    fake_recs = candidates.sample(min(n, len(candidates)))
+   
+    input_movies = movies_df[movies_df['movieId'].isin(selected_movie_ids)]
+    input_genres = set(input_movies['genres'].str.split('|').explode())
+    input_genres.discard('(no genres listed)')
     
-    # Cria estrutura de 'score' fake só para exibir
-    predictions = [(row.movieId, random.uniform(3.5, 5.0)) for row in fake_recs.itertuples()]
     
-    return _format_results(predictions, movies_df, n)
-
-def _format_results(predictions, movies_df, n):
-    """Função interna para formatar a saída com Imagens e Títulos"""
-    predictions.sort(key=lambda x: x[1], reverse=True)
-    top_n = predictions[:n]
-    
-    results = []
-    for movie_id, score in top_n:
-        movie_row = movies_df[movies_df['movieId'] == movie_id]
-        if movie_row.empty: continue
-        movie_info = movie_row.iloc[0]
+    if knn_item is not None:
+        candidates = {}
         
-        poster_url = "https://via.placeholder.com/300x450?text=Sem+Link"
-        if 'tmdbId' in movie_info:
-            poster_url = fetch_poster_url(movie_info['tmdbId'])
-            
-        results.append({
-            'movieId': movie_id,
-            'Title': movie_info['title'],
-            'Genres': str(movie_info['genres']).replace('|', ', '),
-            'Score': score,
-            'Poster': poster_url
-        })
-    return pd.DataFrame(results)
-
-
-# def get_recommendations_new_user(selected_movie_ids, models, movies_df, ratings_df, n=10):
-#     """
-#     Usa o modelo KNN ITEM-BASED treinado para achar itens similares.
-#     """
-
-#     knn_item = models.get("KNN_ITEM")
-    
-#     # 1. Descobrir quais gêneros o usuário selecionou
-#     input_movies = movies_df[movies_df['movieId'].isin(selected_movie_ids)]
-#     input_genres = set(input_movies['genres'].str.split('|').explode())
-#     # Removemos gêneros genéricos se quiser limpar mais
-#     input_genres.discard('(no genres listed)')
-    
-#     # --- CENÁRIO A: TEMOS O MODELO TREINADO (Ideal) ---
-#     if knn_item is not None:
-#         candidates = {}
-        
-#         for raw_id in selected_movie_ids:
-#             try:
-#                 # Converte ID Real -> ID Interno do Surprise
-#                 inner_id = knn_item.trainset.to_inner_iid(raw_id)
+        for raw_id in selected_movie_ids:
+            try:
+                inner_id = knn_item.trainset.to_inner_iid(raw_id)
                 
-#                 # Pega os 10 vizinhos mais próximos na matriz treinada
-#                 neighbors = knn_item.get_neighbors(inner_id, k=10)
+                neighbors = knn_item.get_neighbors(inner_id, k=10)
                 
-#                 for i, neighbor_inner_id in enumerate(neighbors):
-#                     # Converte ID Interno -> ID Real
-#                     neighbor_raw_id = knn_item.trainset.to_raw_iid(neighbor_inner_id)
+                for i, neighbor_inner_id in enumerate(neighbors):
+                    neighbor_raw_id = knn_item.trainset.to_raw_iid(neighbor_inner_id)
 
-#                     cand_row = movies_df[movies_df['movieId'] == neighbor_raw_id]
-#                     if not cand_row.empty:
-#                         cand_genres = set(cand_row.iloc[0]['genres'].split('|'))
+                    cand_row = movies_df[movies_df['movieId'] == neighbor_raw_id]
+                    if not cand_row.empty:
+                        cand_genres = set(cand_row.iloc[0]['genres'].split('|'))
                         
-#                         # Só aceita se tiver intersecção de gêneros (pelo menos 1 igual)
-#                         if not input_genres.intersection(cand_genres):
-#                             continue # Pula esse filme, ele não tem nada a ver com o gosto
+                        if not input_genres.intersection(cand_genres):
+                            continue
 
-#                     # Score baseado na ordem (1º vizinho ganha mais pontos que o 10º)
-#                     score = (1.0 / (i + 1)) * 5.0 
+                    # Score baseado na ordem (1º vizinho ganha mais pontos que o 10º)
+                    score = (1.0 / (i + 1)) * 5.0 
                     
-#                     if neighbor_raw_id not in selected_movie_ids:
-#                         candidates[neighbor_raw_id] = candidates.get(neighbor_raw_id, 0) + score
-#             except ValueError:
-#                 continue # Filme selecionado não estava no treino (muito novo)
+                    if neighbor_raw_id not in selected_movie_ids:
+                        candidates[neighbor_raw_id] = candidates.get(neighbor_raw_id, 0) + score
+            except ValueError:
+                continue 
 
-#         if candidates:
-#             # Normaliza e formata
-#             final_preds = list(candidates.items())
-#             return _format_results(final_preds, movies_df, n)
+        if candidates:
+           
+            final_preds = list(candidates.items())
+            return _format_results(final_preds, movies_df, n)
 
-#     # --- CENÁRIO B: FALLBACK (Se modelo falhar ou não achar vizinhos) ---
-#     # Usa a lógica dinâmica de vizinhança de usuários (que criamos antes)
+    #  FALLBACK (Se modelo falhar ou não achar vizinhos) ---
+    # Usa a lógica dinâmica de vizinhança de usuários (que criamos antes)
     
-#     # 1. Acha usuários que gostaram do que você marcou
-#     similar_users = ratings_df[
-#         (ratings_df['movieId'].isin(selected_movie_ids)) & 
-#         (ratings_df['rating'] >= 4.0)
-#     ]['userId'].unique()
+    similar_users = ratings_df[
+        (ratings_df['movieId'].isin(selected_movie_ids)) & 
+        (ratings_df['rating'] >= 4.0)
+    ]['userId'].unique()
 
-#     if len(similar_users) < 2:
-#         similar_users = ratings_df[ratings_df['movieId'].isin(selected_movie_ids)]['userId'].unique()
+    if len(similar_users) < 2:
+        similar_users = ratings_df[ratings_df['movieId'].isin(selected_movie_ids)]['userId'].unique()
 
-#     if len(similar_users) == 0:
-#         return pd.DataFrame() # Desiste se não achar ninguém
+    if len(similar_users) == 0:
+        return pd.DataFrame() 
 
-#     # 2. Vê o que eles viram
-#     recs = ratings_df[
-#         (ratings_df['userId'].isin(similar_users)) & 
-#         (~ratings_df['movieId'].isin(selected_movie_ids))
-#     ]
+    recs = ratings_df[
+        (ratings_df['userId'].isin(similar_users)) & 
+        (~ratings_df['movieId'].isin(selected_movie_ids))
+    ]
     
-#     # 3. Score = Popularidade * Média
-#     scores = recs.groupby('movieId').agg(
-#         count=('rating', 'count'), 
-#         mean=('rating', 'mean')
-#     )
-#     scores = scores[scores['count'] >= 2] # Filtro mínimo
-#     scores['final_score'] = scores['mean'] # Simplificado
+    scores = recs.groupby('movieId').agg(
+        count=('rating', 'count'), 
+        mean=('rating', 'mean')
+    )
+    scores = scores[scores['count'] >= 2] 
+    scores['final_score'] = scores['mean'] # Simplifica
     
-#     top_ids = scores.sort_values('final_score', ascending=False).head(n).index.tolist()
-#     preds = [(mid, scores.loc[mid, 'final_score']) for mid in top_ids]
+    top_ids = scores.sort_values('final_score', ascending=False).head(n).index.tolist()
+    preds = [(mid, scores.loc[mid, 'final_score']) for mid in top_ids]
     
-#     return _format_results(preds, movies_df, n)
+    return _format_results(preds, movies_df, n)

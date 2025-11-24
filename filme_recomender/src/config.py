@@ -13,6 +13,7 @@ MODELS_DIR = BASE_DIR / "models"
 # Criar pastas se não existirem
 DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+DATA_RAW.mkdir(parents=True, exist_ok=True)
 
 # Parâmetros do seu script original
 MIN_RATINGS_CUTOFF = 5
