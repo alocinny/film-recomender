@@ -6,7 +6,7 @@ import notebooks.SVDeRF.train_svd as train_svd
 def main():
 
     print("========================================")
-    print("🚀 PIPELINE DE SISTEMA DE RECOMENDAÇÃO")
+    print(" PIPELINE DE SISTEMA DE RECOMENDAÇÃO")
     print("========================================")
     
     # 1. Processamento (Sua Etapa 1 Refatorada)
@@ -19,8 +19,7 @@ def main():
     print("\n[ETAPA 2] Treinamento de Modelos")
     step2 = input("Deseja rodar o Treinamento? (s/n): ").lower()
     if step2 == 's':
-        # Nota: Certifique-se que seu training.py lê o arquivo correto!
-        # Agora geramos 'ratings_enriched_normalized.parquet' ou 'ratings_enriched.parquet'
+        
         train_knn.run()
         train_svd.run()
 
