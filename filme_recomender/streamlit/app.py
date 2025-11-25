@@ -212,7 +212,6 @@ else:
                 
                 if not recs.empty:
                         st.success("Recomendações baseadas nos itens que você selecionou:")
-                        # AQUI ESTAVA FALTANDO: Usar a função visual pronta em vez do loop manual
                         display_movies_grid(recs, show_score=False)
                 else:
                     st.warning("Não encontramos correlações suficientes. Tente selecionar filmes mais populares.")
