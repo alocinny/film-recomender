@@ -173,24 +173,20 @@ if user_mode == "Usuário Existente":
 # ------------------------------------------------------------------------------
 # MODO 2: NOVO USUÁRIO (Cold Start)
 # ------------------------------------------------------------------------------
+
 else:
     st.subheader("Bem-vindo! Vamos calibrar o sistema.")
     st.info("ℹ️ Usando algoritmo **KNN Item-Based** (Inteligência de Itens Similares).")
-
-    # --- ALTERAÇÃO 4: IMPLEMENTAÇÃO DO FUNIL DE PREFERÊNCIA ---
     
-    # Passo A: Filtro de Gêneros
     st.markdown("#### 1. Quais gêneros você prefere?")
     all_genres = bk.get_all_genres(movies_df)
     selected_genres = st.multiselect("Selecione:", options=all_genres)
 
-    # Passo B: Seleção de Filmes (Filtrados pelos gêneros acima)
     st.markdown("#### 2. Marque filmes que você GOSTOU:")
-    
-    # Busca populares filtrados
+   
     popular_filtered = bk.get_popular_movies_filtered(movies_df, ratings_df, genres=selected_genres, n=50)
     
-    # Cria lista para o selectbox
+    # Lista para o selectbox
     movie_options = {f"{row.title}": row.movieId for row in popular_filtered.itertuples()}
     selected_titles = st.multiselect("Filmes:", options=list(movie_options.keys()))
     selected_ids = [movie_options[t] for t in selected_titles]
@@ -203,7 +199,7 @@ else:
         else:
             with st.spinner("Buscando itens similares na matriz (Item-Based)..."):
                 
-                # Monta o dicionário com o modelo ITEM-BASED para o backend usar
+               
                 models_dict = {"KNN_ITEM": model_knn_item}
                 
                 recs = bk.get_recommendations_new_user(
