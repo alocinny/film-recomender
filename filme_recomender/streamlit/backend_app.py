@@ -98,7 +98,7 @@ def get_user_profile(user_id, ratings_df, movies_df):
     Retorna um DataFrame com contagem de gêneros assistidos pelo usuário.
     """
     try:
-        # Pega filmes que o usuário avaliou (independente da nota, queremos ver o que ele consome)
+      
         user_movies = ratings_df[ratings_df['userId'] == user_id]
         
         if user_movies.empty:
@@ -186,7 +186,6 @@ def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, rating
         seen_movie_ids = []
         user_id_int = user_id
     
-    # Lista de TODOS os filmes que o usuário não viu
     unseen_movie_ids = list(set(all_movies_id) - set(seen_movie_ids))
     
     if not unseen_movie_ids: 
@@ -226,7 +225,6 @@ def get_recommendations_existing(user_id, model_hb, model_knn, movies_df, rating
     return pd.DataFrame()
 
     
-
 def get_recommendations_new_user(selected_movie_ids, models, movies_df, ratings_df, n=10):
     
     knn_item = models.get("KNN_ITEM")
@@ -269,9 +267,8 @@ def get_recommendations_new_user(selected_movie_ids, models, movies_df, ratings_
             final_preds = list(candidates.items())
             return _format_results(final_preds, movies_df, n)
 
-    #  FALLBACK (Se modelo falhar ou não achar vizinhos) ---
-    # Usa a lógica dinâmica de vizinhança de usuários (que criamos antes)
-    
+    #  FALLBACK (Se modelo falhar ou não achar vizinhos) --- Usa a lógica dinâmica de vizinhança de usuários
+     
     similar_users = ratings_df[
         (ratings_df['movieId'].isin(selected_movie_ids)) & 
         (ratings_df['rating'] >= 4.0)
@@ -293,7 +290,7 @@ def get_recommendations_new_user(selected_movie_ids, models, movies_df, ratings_
         mean=('rating', 'mean')
     )
     scores = scores[scores['count'] >= 2] 
-    scores['final_score'] = scores['mean'] # Simplifica
+    scores['final_score'] = scores['mean'] 
     
     top_ids = scores.sort_values('final_score', ascending=False).head(n).index.tolist()
     preds = [(mid, scores.loc[mid, 'final_score']) for mid in top_ids]
