@@ -12,7 +12,6 @@ def run():
 
     df = pd.read_csv(config.DATA_RAW / 'ratings.csv')
 
-    # definindo a escala. No dataset ratings vão de 0.5 a 5.0
     reader = Reader(rating_scale=(0.5, 5.0))
 
     data = Dataset.load_from_df(df[['userId', 'movieId', 'rating']], reader)
@@ -37,13 +36,11 @@ def run():
 
     print("\n> [2/2] Treinando KNN Item-Based...")
 
-    # Nota: Item-based é computacionalmente mais pesado. 
-    # Se demorar muito, remova 'pearson_baseline' e deixe apenas 'msd'.
     param_grid_item = {
         'k': [40],
         'sim_options': {
-            'name': ['pearson_baseline'], # Simplifiquei para MSD para ser mais rápido, pode adicionar pearson se quiser
-            'user_based': [False],# FALSE = Procura filmes similares
+            'name': ['pearson_baseline'],
+            'user_based': [False],
             'shrinkage':[100]
         }
     }
