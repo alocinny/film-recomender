@@ -90,4 +90,32 @@ Com os modelos treinados (.pkl gerados), suba o servidor Streamlit:
 streamlit run streamlit/app.py
 ``` 
 
-<div align="center"> <sub>Built with 💀 by alocinny, michellydarquia, Danielle-sn</sub> </div>
+## Equipe
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <a href="https://github.com/alocinny">
+        <img src="https://github.com/alocinny.png" width="100px;" alt=""/><br>
+        <sub><b>Ana Beatriz Soares</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Danielle-sn">
+        <img src="https://github.com/Danielle-sn.png" width="100px;" alt=""/><br>
+        <sub><b>Danielle Stephany</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/michellydarquia">
+        <img src="https://github.com/michellydarquia.png" width="100px;" alt=""/><br>
+        <sub><b>Michelly Darquia</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+<div align="center">
+  <p><b>Orientação Acadêmica</b></p>
+  <img src="https://img.shields.io/badge/Orientador-Prof._Fausto_Lorenzato-0d1117?style=flat-square&logo=lecture&logoColor=39d353&color=0d1117&labelColor=0d1117" />
+</div>
