@@ -61,7 +61,7 @@ Abaixo, a arquitetura dos scripts principais do pipeline:
 ### 1. Preparação do Ambiente
 Certifique-se de ter o Python 3.8+ instalado.
 
-Baixe o dataset do movie lens e coloque em ```/data```: https://files.grouplens.org/datasets/movielens/ml-latest-small.zip
+Baixe o dataset do movie lens e coloque em ```/data/raw```: https://files.grouplens.org/datasets/movielens/ml-latest-small.zip
 
 ```bash
 # Clone o repositório
