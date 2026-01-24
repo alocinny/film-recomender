@@ -65,7 +65,7 @@ Baixe o dataset do movie lens e coloque em ```/data/raw```: https://files.groupl
 
 ```bash
 # Clone o repositório
-git clone [https://github.com/alocinny/film-recomender.git](https://github.com/alocinny/film-recomender.git)
+git clone https://github.com/alocinny/film-recomender.git
 cd film-recomender
 
 # Crie e ative o ambiente virtual
